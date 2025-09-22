@@ -48,12 +48,9 @@ export class InstaProfileService {
   constructor(
     private readonly httpService: HttpService,
     private readonly mailService: MailService,
-  ) {
-    // this.executeFullProcess('influencerList1.xlsx');
-  }
+  ) {}
 
-  // @Cron('0 0 * * *')
-  @Cron('48 18 * * *')
+  @Cron('0 0 * * *')
   async runDailyInstagramCrawling() {
     console.log('🕛 매일 자정 Instagram 크롤링 시작!');
     const filePath = 'data/instagram_profiles_enhanced_result.xlsx';
@@ -71,9 +68,23 @@ export class InstaProfileService {
       console.error('❌ 매일 자정 Instagram 크롤링 실패:', error);
     }
   }
+  @Cron('30 08 * * *')
+  async runSendEmail() {
+    console.log('이메일 전송 시작');
+    const filePath = 'data/instagram_profiles_enhanced_result.xlsx';
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const info = await this.mailService.sendFileOnlyMail(
+        'instagram crawl',
+        filePath,
+      );
+      console.log('✅ 메일 발송 완료:', info.messageId);
+    } catch (error) {
+      console.error('메일 전송 실패:', error);
+    }
+  }
 
   async executeFullProcess(fileName: string): Promise<void> {
-    // 파일 경로 확인 및 처리
     let filePath: string;
 
     if (path.isAbsolute(fileName)) {
