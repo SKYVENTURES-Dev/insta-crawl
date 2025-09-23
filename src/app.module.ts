@@ -1,9 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { DcService } from './dc/dc.service';
-import { FmService } from './fm/fm.service';
-import { ClienService } from './clien/clien.service';
 import { InstaCrawlModule } from './insta-crawl/insta-crawl.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TiktokModule } from './tiktok/tiktok.module';
@@ -17,6 +14,7 @@ import { TodayHumerModule } from './today-humer/today-humer.module';
 import { YgosuModule } from './ygosu/ygosu.module';
 import { MailModule } from './mail/mail.module';
 import { ConfigModule } from '@nestjs/config';
+import { GoogleDriveModule } from './google-drive/google-drive.module';
 
 @Module({
   controllers: [AppController],
@@ -44,6 +42,7 @@ import { ConfigModule } from '@nestjs/config';
     TiktokModule,
     InstaProfileModule,
     MailModule,
+    GoogleDriveModule,
   ],
 })
 export class AppModule {}

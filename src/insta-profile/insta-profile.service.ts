@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import { firstValueFrom } from 'rxjs';
 import { Cron } from '@nestjs/schedule';
 import { MailService } from 'src/mail/mail.service';
+import { GoogleDriveService } from 'src/google-drive/google-drive.service';
 
 interface InstagramProfile {
   username: string;
@@ -42,28 +43,20 @@ interface CookieData {
 
 @Injectable()
 export class InstaProfileService {
-  private readonly cookiesPath =
-    '/Users/youyeonjoon/Documents/dev/community_crawl/cookies3.json';
+  private readonly cookiesPath = 'cookies3.json';
 
   constructor(
     private readonly httpService: HttpService,
     private readonly mailService: MailService,
+    private readonly googleDriveService: GoogleDriveService,
   ) {}
 
   @Cron('0 0 * * *')
   async runDailyInstagramCrawling() {
     console.log('🕛 매일 자정 Instagram 크롤링 시작!');
-    const filePath = 'data/instagram_profiles_enhanced_result.xlsx';
     try {
       await this.executeFullProcess('influencerList1.xlsx');
       console.log('✅ 매일 자정 Instagram 크롤링 완료!');
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const info = await this.mailService.sendFileOnlyMail(
-        'instagram crawl',
-        filePath,
-      );
-      console.log('✅ 메일 발송 완료:', info.messageId);
     } catch (error) {
       console.error('❌ 매일 자정 Instagram 크롤링 실패:', error);
     }
@@ -71,12 +64,14 @@ export class InstaProfileService {
   @Cron('30 08 * * *')
   async runSendEmail() {
     console.log('이메일 전송 시작');
-    const filePath = 'data/instagram_profiles_enhanced_result.xlsx';
+    const response =
+      await this.googleDriveService.uploadInstagramProfilesFile();
+    const url = response.shareableUrl!;
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const info = await this.mailService.sendFileOnlyMail(
         'instagram crawl',
-        filePath,
+        url,
       );
       console.log('✅ 메일 발송 완료:', info.messageId);
     } catch (error) {
@@ -122,7 +117,7 @@ export class InstaProfileService {
 
       const outputFilePath = path.join(
         path.dirname(filePath),
-        'instagram_profiles_enhanced_result.xlsx',
+        'instagram_profiles_result.xlsx',
       );
       await this.saveToExcel(profiles, outputFilePath);
 
@@ -851,7 +846,7 @@ export class InstaProfileService {
     filePath: string,
   ): Promise<void> {
     try {
-      console.log('\n=== 엑셀 파일 저장 시작 ===');
+      console.log('\n=== 최적화된 엑셀 파일 저장 시작 ===');
 
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Instagram Profiles Enhanced');
@@ -873,25 +868,18 @@ export class InstaProfileService {
         { header: '오류 메시지', key: 'error', width: 30 },
       ];
 
-      // 헤더 행 스타일 적용
+      // 헤더 행 스타일 적용 (간소화)
       const headerRow = worksheet.getRow(1);
       headerRow.eachCell((cell) => {
-        cell.font = { bold: true, color: { argb: 'FFFFFF' } };
+        cell.font = { bold: true };
         cell.fill = {
           type: 'pattern',
           pattern: 'solid',
-          fgColor: { argb: '366092' },
-        };
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' },
+          fgColor: { argb: 'CCCCCC' }, // 더 간단한 색상
         };
       });
 
-      // 데이터 행 추가 - 이미지 다운로드를 순차 처리
+      // 데이터 행 추가 - 이미지 최적화
       for (let index = 0; index < profiles.length; index++) {
         const profile = profiles[index];
 
@@ -901,7 +889,7 @@ export class InstaProfileService {
           followers: this.cleanStatText(profile.followers),
           following: this.cleanStatText(profile.following),
           postUrl: profile.latestPost.postUrl,
-          thumbnailImage: profile.latestPost.thumbnailImage, // 기본값으로 URL 설정
+          thumbnailImage: profile.latestPost.thumbnailImage,
           likes: profile.latestPost.likes,
           postingDate: profile.latestPost.postingDate,
           postType: profile.latestPost.postType,
@@ -912,14 +900,13 @@ export class InstaProfileService {
           error: profile.error || '',
         });
 
-        // HttpService를 사용한 이미지 다운로드 및 삽입
+        // 이미지 처리 - 크기 대폭 축소
         if (profile.latestPost.thumbnailImage) {
           try {
             console.log(
               `이미지 다운로드 중 (${index + 1}/${profiles.length}): ${profile.latestPost.thumbnailImage}`,
             );
 
-            // HttpService로 이미지 다운로드
             const response = await firstValueFrom(
               this.httpService.get(profile.latestPost.thumbnailImage, {
                 responseType: 'arraybuffer',
@@ -933,7 +920,7 @@ export class InstaProfileService {
 
             const buffer = Buffer.from(response.data);
 
-            // 이미지 타입 확인 및 extension 설정
+            // 이미지 타입 확인
             let extension: 'jpeg' | 'png' | 'gif' = 'jpeg';
             const contentType = response.headers['content-type'];
             if (contentType?.includes('png')) {
@@ -947,58 +934,43 @@ export class InstaProfileService {
               extension: extension,
             });
 
+            // 이미지 크기 대폭 축소 (기존 100x100 → 50x50)
             worksheet.addImage(imageId, {
-              tl: { col: 5, row: row.number - 1 }, // F열 (썸네일 이미지 컬럼, 0-based)
-              ext: { width: 100, height: 100 },
+              tl: { col: 5, row: row.number - 1 },
+              ext: { width: 50, height: 50 }, // 크기 절반으로 축소
               editAs: 'oneCell',
             });
 
-            // 이미지 셀은 빈 값으로 설정
             const imageCell = worksheet.getCell(row.number, 6);
             imageCell.value = '';
 
             console.log(
-              `이미지 삽입 성공: ${profile.latestPost.thumbnailImage}`,
+              `이미지 삽입 성공 (최적화됨): ${profile.latestPost.thumbnailImage}`,
             );
           } catch (imageError) {
             console.error(
               `이미지 삽입 실패 (${profile.latestPost.thumbnailImage}):`,
               imageError.message,
             );
-            // 실패시 URL만 텍스트로 삽입
             const imageCell = worksheet.getCell(row.number, 6);
             imageCell.value = profile.latestPost.thumbnailImage;
           }
         }
 
-        // 데이터 행 스타일 적용
+        // 스타일 최소화 (테두리 제거)
         row.eachCell((cell) => {
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' },
-          };
           cell.alignment = { vertical: 'middle', wrapText: true };
         });
 
-        // 홀수/짝수 행 배경색 구분
-        if (index % 2 === 1) {
-          row.eachCell((cell) => {
-            cell.fill = {
-              type: 'pattern',
-              pattern: 'solid',
-              fgColor: { argb: 'F8F9FA' },
-            };
-          });
-        }
+        // 배경색 제거 (용량 절약)
+        // if (index % 2 === 1) { ... } 코드 제거
 
-        // 이미지 표시를 위한 행 높이 조정
-        worksheet.getRow(row.number).height = 60;
+        // 행 높이 축소 (기존 60 → 40)
+        worksheet.getRow(row.number).height = 40;
       }
 
-      // 숫자 컬럼 정렬 (게시물수, 팔로워수, 팔로잉수, 좋아요수)
-      const numberColumns = [2, 3, 4, 7]; // B, C, D, G 컬럼
+      // 숫자 컬럼 정렬
+      const numberColumns = [2, 3, 4, 7];
       numberColumns.forEach((colNum) => {
         worksheet.getColumn(colNum).alignment = {
           horizontal: 'right',
@@ -1006,14 +978,13 @@ export class InstaProfileService {
         };
       });
 
+      // 파일 저장
       await workbook.xlsx.writeFile(filePath);
 
-      console.log(`엑셀 파일 저장 완료: ${filePath}`);
-      console.log(`총 ${profiles.length}개의 프로필 데이터가 저장되었습니다.`);
-
-      // 저장된 파일 정보 출력
       const fileStats = await fs.promises.stat(filePath);
+      console.log(`최적화된 엑셀 파일 저장 완료: ${filePath}`);
       console.log(`파일 크기: ${(fileStats.size / 1024).toFixed(2)} KB`);
+      console.log(`총 ${profiles.length}개의 프로필 데이터가 저장되었습니다.`);
     } catch (error) {
       console.error('엑셀 파일 저장 중 오류:', error);
       throw error;

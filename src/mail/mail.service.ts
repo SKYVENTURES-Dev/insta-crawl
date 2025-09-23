@@ -3,7 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { Transporter } from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
-import * as path from 'path';
 
 @Injectable()
 export class MailService {
@@ -26,10 +25,10 @@ export class MailService {
 
   async sendFileOnlyMail(
     subject: string,
-    filePath: string,
+    url: string,
   ): Promise<SMTPTransport.SentMessageInfo> {
     const mailOptions: SMTPTransport.Options = {
-      from: `"skyventures dev" ${this.configSevice.get<string>('SMTP_USER')}`,
+      from: `"인플루언서 크롤링 데이터_skyventures_DEV" ${this.configSevice.get<string>('SMTP_USER')}`,
       to: 'eslee@hahmpartners.com', // 받는 계정
       cc: [
         'uniqlo_pr@hahmpartners.com',
@@ -37,13 +36,7 @@ export class MailService {
         'tkdwns27@omtlabs.com',
       ],
       subject,
-      text: '첨부파일(크롤링 데이터)을 확인해주세요', // 간단한 안내 문구
-      attachments: [
-        {
-          filename: path.basename(filePath),
-          path: filePath,
-        },
-      ],
+      text: `구글 드라이브 링크를 참고해주세요! ${url}`, // 간단한 안내 문구
     };
 
     const info = await this.transporter.sendMail(mailOptions);
