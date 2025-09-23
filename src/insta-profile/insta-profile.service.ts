@@ -43,7 +43,7 @@ interface CookieData {
 
 @Injectable()
 export class InstaProfileService {
-  private readonly cookiesPath = 'cookies3.json';
+  private readonly cookiesPath = 'cookies2.json';
 
   constructor(
     private readonly httpService: HttpService,
