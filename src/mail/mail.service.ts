@@ -28,7 +28,7 @@ export class MailService {
     url: string,
   ): Promise<SMTPTransport.SentMessageInfo> {
     const mailOptions: SMTPTransport.Options = {
-      from: `"인플루언서 크롤링 데이터_skyventures_DEV" ${this.configSevice.get<string>('SMTP_USER')}`,
+      from: `"skyventures_dev" ${this.configSevice.get<string>('SMTP_USER')}`,
       to: 'eslee@hahmpartners.com', // 받는 계정
       cc: [
         'uniqlo_pr@hahmpartners.com',

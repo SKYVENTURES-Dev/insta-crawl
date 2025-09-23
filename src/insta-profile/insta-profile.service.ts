@@ -50,8 +50,8 @@ export class InstaProfileService {
     private readonly mailService: MailService,
     private readonly googleDriveService: GoogleDriveService,
   ) {
-    // this.executeFullProcess('influencerList1.xlsx');
-    this.runSendEmail();
+    // this.executeFullProcess('influencerList.xlsx');
+    // this.runSendEmail();
   }
 
   @Cron('0 0 * * *')
