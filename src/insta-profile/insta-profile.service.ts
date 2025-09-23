@@ -43,19 +43,22 @@ interface CookieData {
 
 @Injectable()
 export class InstaProfileService {
-  private readonly cookiesPath = 'cookies2.json';
+  private readonly cookiesPath = 'cookies.json';
 
   constructor(
     private readonly httpService: HttpService,
     private readonly mailService: MailService,
     private readonly googleDriveService: GoogleDriveService,
-  ) {}
+  ) {
+    // this.executeFullProcess('influencerList1.xlsx');
+    this.runSendEmail();
+  }
 
   @Cron('0 0 * * *')
   async runDailyInstagramCrawling() {
     console.log('🕛 매일 자정 Instagram 크롤링 시작!');
     try {
-      await this.executeFullProcess('influencerList1.xlsx');
+      await this.executeFullProcess('influencerList.xlsx');
       console.log('✅ 매일 자정 Instagram 크롤링 완료!');
     } catch (error) {
       console.error('❌ 매일 자정 Instagram 크롤링 실패:', error);
@@ -70,7 +73,7 @@ export class InstaProfileService {
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const info = await this.mailService.sendFileOnlyMail(
-        'instagram crawl',
+        '유니클로 인플루언서 최근 게시물 크롤링',
         url,
       );
       console.log('✅ 메일 발송 완료:', info.messageId);
