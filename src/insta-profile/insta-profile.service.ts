@@ -47,7 +47,7 @@ export class InstaProfileService {
     private readonly mailService: MailService,
     private readonly googleDriveService: GoogleDriveService,
   ) {
-    this.executeFullProcess('influencerList.xlsx');
+    // this.executeFullProcess('influencerList.xlsx');
     // this.runSendEmail();
   }
 
