@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
 import { chromium, BrowserContext, Page } from 'playwright';
 import * as ExcelJS from 'exceljs';
 import * as path from 'path';
 import * as fs from 'fs';
-import { firstValueFrom } from 'rxjs';
 import { Cron } from '@nestjs/schedule';
 import { MailService } from 'src/mail/mail.service';
 import { GoogleDriveService } from 'src/google-drive/google-drive.service';
@@ -46,7 +44,6 @@ export class InstaProfileService {
   private readonly cookiesPath = 'cookies.json';
 
   constructor(
-    private readonly httpService: HttpService,
     private readonly mailService: MailService,
     private readonly googleDriveService: GoogleDriveService,
   ) {
@@ -860,7 +857,6 @@ export class InstaProfileService {
         { header: '팔로워 수', key: 'followers', width: 15 },
         { header: '팔로잉 수', key: 'following', width: 15 },
         { header: '포스트 URL', key: 'postUrl', width: 60 },
-        { header: '썸네일 이미지', key: 'thumbnailImage', width: 25 },
         { header: '좋아요 수', key: 'likes', width: 15 },
         { header: '포스팅 날짜', key: 'postingDate', width: 20 },
         { header: '포스트 형식', key: 'postType', width: 15 },
@@ -892,7 +888,6 @@ export class InstaProfileService {
           followers: this.cleanStatText(profile.followers),
           following: this.cleanStatText(profile.following),
           postUrl: profile.latestPost.postUrl,
-          thumbnailImage: profile.latestPost.thumbnailImage,
           likes: profile.latestPost.likes,
           postingDate: profile.latestPost.postingDate,
           postType: profile.latestPost.postType,
@@ -902,64 +897,6 @@ export class InstaProfileService {
           status: profile.status,
           error: profile.error || '',
         });
-
-        // 이미지 처리 - 크기 대폭 축소
-        if (profile.latestPost.thumbnailImage) {
-          try {
-            console.log(
-              `이미지 다운로드 중 (${index + 1}/${profiles.length}): ${profile.latestPost.thumbnailImage}`,
-            );
-
-            const response = await firstValueFrom(
-              this.httpService.get(profile.latestPost.thumbnailImage, {
-                responseType: 'arraybuffer',
-                timeout: 10000,
-                headers: {
-                  'User-Agent':
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                },
-              }),
-            );
-
-            const buffer = Buffer.from(response.data);
-
-            // 이미지 타입 확인
-            let extension: 'jpeg' | 'png' | 'gif' = 'jpeg';
-            const contentType = response.headers['content-type'];
-            if (contentType?.includes('png')) {
-              extension = 'png';
-            } else if (contentType?.includes('gif')) {
-              extension = 'gif';
-            }
-
-            const imageId = workbook.addImage({
-              buffer: buffer,
-              extension: extension,
-            });
-
-            // 이미지 크기 대폭 축소 (기존 100x100 → 50x50)
-            worksheet.addImage(imageId, {
-              tl: { col: 5, row: row.number - 1 },
-              ext: { width: 50, height: 50 }, // 크기 절반으로 축소
-              editAs: 'oneCell',
-            });
-
-            const imageCell = worksheet.getCell(row.number, 6);
-            imageCell.value = '';
-
-            console.log(
-              `이미지 삽입 성공 (최적화됨): ${profile.latestPost.thumbnailImage}`,
-            );
-          } catch (imageError) {
-            console.error(
-              `이미지 삽입 실패 (${profile.latestPost.thumbnailImage}):`,
-              imageError.message,
-            );
-            const imageCell = worksheet.getCell(row.number, 6);
-            imageCell.value = profile.latestPost.thumbnailImage;
-          }
-        }
-
         // 스타일 최소화 (테두리 제거)
         row.eachCell((cell) => {
           cell.alignment = { vertical: 'middle', wrapText: true };
