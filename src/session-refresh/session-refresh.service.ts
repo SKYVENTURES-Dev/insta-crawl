@@ -10,7 +10,7 @@ export class SessionRefreshService {
     this.sessionRefreshLogin();
   }
 
-  @Cron('58 23 * * *')
+  @Cron('0 6 * * *')
   async sessionRefreshLogin() {
     const id = this.configService.get<string>('ID2') || '';
     const password = this.configService.get<string>('PASSWORD2') || '';
