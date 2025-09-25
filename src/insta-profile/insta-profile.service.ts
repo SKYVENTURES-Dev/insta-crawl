@@ -47,7 +47,7 @@ export class InstaProfileService {
     private readonly mailService: MailService,
     private readonly googleDriveService: GoogleDriveService,
   ) {
-    // this.executeFullProcess('influencerList.xlsx');
+    // this.executeFullProcess('influencerList1.xlsx');
     // this.runSendEmail();
   }
 
@@ -61,7 +61,8 @@ export class InstaProfileService {
       console.error('❌ 매일 자정 Instagram 크롤링 실패:', error);
     }
   }
-  @Cron('50 08 * * *')
+  // @Cron('50 08 * * *')
+  @Cron('5 18 * * *')
   async runSendEmail() {
     console.log('이메일 전송 시작');
     const response =
@@ -934,15 +935,27 @@ export class InstaProfileService {
     }
   }
 
-  private async extractDetailedStats(
-    page: Page,
-  ): Promise<{ posts: string; followers: string; following: string }> {
+  private async extractDetailedStats(page: Page): Promise<{
+    posts: string;
+    followers: string;
+    following: string;
+  }> {
     try {
-      const allStats = await page
-        .locator('header ul li span')
-        .allInnerTexts()
-        .catch(() => ['', '', '']);
+      // 1. 게시물 수 추출 (html-span에서 콤마 포함 숫자 찾기)
+      let postsText = '';
+      const allSpans = await page.locator('span.html-span').allTextContents();
+      try {
+        // 콤마가 포함된 숫자 패턴 찾기 (23,118 같은)
+        const postsNumber = allSpans.find((text) =>
+          /^[\d,]+$/.test(text.trim()),
+        );
+        postsText = postsNumber || '';
+        console.log(`📝 게시물 수: ${postsText}`);
+      } catch (error) {
+        console.log('게시물 수 추출 실패:', error);
+      }
 
+      // 2. 팔로워 수 추출 (기존 코드 유지)
       let followersText = '';
       try {
         const followersWithTitle = await page
@@ -950,35 +963,35 @@ export class InstaProfileService {
           .getAttribute('title');
         if (followersWithTitle) {
           followersText = followersWithTitle;
-          console.log(
-            `📊 정확한 팔로워 수 발견 (title 속성): ${followersText}`,
-          );
+          console.log(`👥 팔로워 수 (title): ${followersText}`);
         } else {
-          followersText =
-            allStats.find(
-              (text) => text.includes('팔로워') || text.includes('followers'),
-            ) || '';
+          const followersElement = page.locator(
+            'a[href*="/followers/"] span.html-span',
+          );
+          followersText = (await followersElement.textContent()) || '';
+          console.log(`👥 팔로워 수 (text): ${followersText}`);
         }
       } catch (error) {
-        followersText =
-          allStats.find(
-            (text) => text.includes('팔로워') || text.includes('followers'),
-          ) || '';
+        console.log('팔로워 수 추출 실패:', error);
+      }
+
+      // 3. 팔로잉 수 추출 (기존 코드 유지)
+      let followingText = '';
+      try {
+        followingText =
+          allSpans.find((text) => /^\d+$/.test(text.trim())) || '';
+        console.log(`➡️ 팔로잉 수: ${followingText}`);
+      } catch (error) {
+        console.log('팔로잉 수 추출 실패:', error);
       }
 
       const result = {
-        posts:
-          allStats.find(
-            (text) => text.includes('게시물') || text.includes('posts'),
-          ) || '',
+        posts: postsText,
         followers: followersText,
-        following:
-          allStats.find(
-            (text) => text.includes('팔로우') || text.includes('following'),
-          ) || '',
+        following: followingText,
       };
 
-      console.log('✅ 추출된 통계:', result);
+      console.log('✅ 최종 추출된 통계:', result);
       return result;
     } catch (error) {
       console.error('통계 추출 중 오류:', error);
