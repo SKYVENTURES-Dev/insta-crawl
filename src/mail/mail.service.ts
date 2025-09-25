@@ -23,20 +23,30 @@ export class MailService {
     this.transporter = nodemailer.createTransport(transporterOptions);
   }
 
+  todayDate(): string {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2); // 마지막 두 자리
+    const month = (now.getMonth() + 1).toString().padStart(2, '0'); // 월은 0부터 시작하므로 +1
+    const day = now.getDate().toString().padStart(2, '0');
+
+    return `${year}${month}${day}`;
+  }
+
   async sendFileOnlyMail(
     subject: string,
     url: string,
   ): Promise<SMTPTransport.SentMessageInfo> {
     const mailOptions: SMTPTransport.Options = {
       from: `"skyventures_dev" ${this.configSevice.get<string>('SMTP_USER')}`,
-      to: 'eslee@hahmpartners.com', // 받는 계정
-      cc: [
-        'uniqlo_pr@hahmpartners.com',
-        'ceo@skyventures.co.kr',
-        'tkdwns27@omtlabs.com',
-      ],
+      to: 'uej0868@gmail.com',
+      // to: 'eslee@hahmpartners.com', // 받는 계정
+      // cc: [
+      //   'uniqlo_pr@hahmpartners.com',
+      //   'ceo@skyventures.co.kr',
+      //   'tkdwns27@omtlabs.com',
+      // ],
       subject,
-      text: `구글 드라이브 링크를 참고해주세요! ${url}`, // 간단한 안내 문구
+      text: `${this.todayDate()}유니클로 데이터 크롤링 파일 전달드립니다. ${url}`, // 간단한 안내 문구
     };
 
     const info = await this.transporter.sendMail(mailOptions);

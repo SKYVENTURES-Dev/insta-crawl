@@ -61,7 +61,7 @@ export class InstaProfileService {
       console.error('❌ 매일 자정 Instagram 크롤링 실패:', error);
     }
   }
-  @Cron('30 08 * * *')
+  // @Cron('30 08 * * *')
   async runSendEmail() {
     console.log('이메일 전송 시작');
     const response =

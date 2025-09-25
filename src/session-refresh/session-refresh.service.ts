@@ -7,7 +7,7 @@ import { Cron } from '@nestjs/schedule';
 @Injectable()
 export class SessionRefreshService {
   constructor(private readonly configService: ConfigService) {
-    // this.sessionRefreshLogin();
+    this.sessionRefreshLogin();
   }
 
   @Cron('58 23 * * *')
@@ -16,7 +16,7 @@ export class SessionRefreshService {
     const password = this.configService.get<string>('PASSWORD2') || '';
 
     const browser = await chromium.launch({
-      headless: false,
+      headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
