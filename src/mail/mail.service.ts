@@ -38,15 +38,14 @@ export class MailService {
   ): Promise<SMTPTransport.SentMessageInfo> {
     const mailOptions: SMTPTransport.Options = {
       from: `"skyventures_dev" ${this.configSevice.get<string>('SMTP_USER')}`,
-      to: 'uej0868@gmail.com',
-      // to: 'eslee@hahmpartners.com', // 받는 계정
-      // cc: [
-      //   'uniqlo_pr@hahmpartners.com',
-      //   'ceo@skyventures.co.kr',
-      //   'tkdwns27@omtlabs.com',
-      // ],
+      to: 'eslee@hahmpartners.com', // 받는 계정
+      cc: [
+        'uniqlo_pr@hahmpartners.com',
+        'ceo@skyventures.co.kr',
+        'tkdwns27@omtlabs.com',
+      ],
       subject,
-      text: `${this.todayDate()}유니클로 데이터 크롤링 파일 전달드립니다. ${url}`, // 간단한 안내 문구
+      text: `${this.todayDate()}_유니클로 데이터 크롤링 파일 전달드립니다. ${url}`, // 간단한 안내 문구
     };
 
     const info = await this.transporter.sendMail(mailOptions);
