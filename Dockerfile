@@ -26,4 +26,5 @@ RUN pnpm run build
 
 EXPOSE 8000
 
-CMD [ "node", "dist/main" ]
+ENV TZ=Asia/Seoul
+CMD ["node", "dist/main"]
